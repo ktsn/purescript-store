@@ -1,6 +1,10 @@
 {
   "name": "purescript-store",
-  "version": "0.0.0",
+  "description": "PureScript data store for real world applications",
+  "authors": [
+    "katashin"
+  ],
+  "license": "MIT",
   "moduleType": [
     "node"
   ],
@@ -8,7 +12,8 @@
     "**/.*",
     "node_modules",
     "bower_components",
-    "output"
+    "output",
+    "test"
   ],
   "dependencies": {
     "purescript-prelude": "^0.1.5",
