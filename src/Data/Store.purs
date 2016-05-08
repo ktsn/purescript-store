@@ -1,37 +1,26 @@
 module Data.Store where
 
-import Prelude
-import Control.Monad.Eff (foreachE, Eff)
-import Control.Monad.State (execState, modify, State)
+import Control.Monad.Eff (Eff)
+import Control.Monad.Eff.Unsafe (unsafePerformEff)
+import Prelude (map, Unit, ($))
+import Signal (runSignal, foldp, Signal)
+import Signal.Channel (CHANNEL, subscribe, Channel, channel, send)
 
-type Subscriber s = s -> Eff () Unit
+type StoreEff e = Eff (channel :: CHANNEL | e) Unit
 
-type Action a = { type :: String | a }
-
-newtype Store s a = Store
-  { state       :: s
-  , updater     :: s -> Action a -> s
-  , subscribers :: Array (Subscriber s)
+type Store s a e =
+  { dispatch  :: a -> StoreEff e
+  , subscribe :: (s -> StoreEff e) -> StoreEff e
   }
 
-type StoreState s a = State (Store s a) Unit
+create :: forall s a e. s -> a -> (a -> s -> s) -> Store s a e
+create initialState initialAction update = { dispatch: dispatch, subscribe: subscribe' }
+  where
+  dispatch   a = send actionChannel a
+  subscribe' f = runSignal $ map f storeSignal
 
-subscribe :: forall s a. Subscriber s -> StoreState s a
-subscribe f = modify \(Store s) -> Store s { subscribers = s.subscribers ++ [f] } :: Store s a
+  actionChannel :: Channel a
+  actionChannel = unsafePerformEff $ channel initialAction
 
-update :: forall s a. Action a -> StoreState s a
-update a = modify \(Store s) -> Store s { state = s.updater s.state a } :: Store s a
-
-dispatch :: forall s a. Store s a -> Action a -> Eff () (Store s a)
-dispatch s a = do
-  let next = execState (update a) s
-  case next of
-    Store n -> foreachE n.subscribers \sub -> sub n.state
-  return next
-
-create :: forall s a. s -> (s -> Action a -> s) -> Store s a
-create s f = Store
-  { state       : s
-  , updater     : f
-  , subscribers : []
-  }
+  storeSignal :: Signal s
+  storeSignal = foldp update initialState (subscribe actionChannel)

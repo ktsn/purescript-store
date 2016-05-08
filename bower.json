@@ -11,7 +11,7 @@
     "output"
   ],
   "dependencies": {
-    "purescript-transformers": "^0.8.4",
-    "purescript-prelude": "^0.1.5"
+    "purescript-prelude": "^0.1.5",
+    "purescript-signal": "^5.2.0"
   }
 }
